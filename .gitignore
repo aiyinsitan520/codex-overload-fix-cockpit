@@ -1,0 +1,26 @@
+# Logs and captured traffic - never commit these.
+# relay.log contains request sizes, session ids and turn ids.
+# *.body / *.meta contain full request payloads, including prompts and images.
+*.log
+*.log.1
+*.body
+*.meta
+capture-out/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Keep the example config, ignore any local copy.
+config/config.toml
+config/config.local.toml
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

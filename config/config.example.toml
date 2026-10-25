@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+# Direct layout — the relay sits in front of chatgpt.com.
+#
+# Codex  ->  127.0.0.1:8787 (relay)  ->  chatgpt.com/backend-api/codex
+#
+# Use this only if Codex talks to the official endpoint directly. If you run
+# cockpit-tools (or any other local gateway), use cockpit.config.example.toml
+# instead — pointing the relay at the internet while a gateway exists simply
+# bypasses the gateway.
+#
+# Back up your config first, then fully quit and restart Codex.
+# ---------------------------------------------------------------------------
+
+model_provider = "openai-retry"
+
+[model_providers.openai-retry]
+name = "OpenAI (retry)"
+base_url = "http://127.0.0.1:8787"
+wire_api = "responses"
+
+# Reuses the ChatGPT OAuth token Codex already has. No re-login, no plan
+# change, no separate API key. The relay forwards Authorization and account
+# headers byte-for-byte.
+requires_openai_auth = true
+
+# The relay does the real retrying; these stop Codex giving up early on the
+# outer stream.
+stream_max_retries = 20
+request_max_retries = 10
+
+# ---------------------------------------------------------------------------
+# Notes
+#
+# * `openai` is a reserved provider id and cannot be overridden. That is why
+#   this defines a new provider instead of patching the built-in one.
+#
+# * Roll back by deleting the model_provider line and the block above.
+#
+# * If you need a proxy, pass it to the relay rather than relying on the app:
+#     python relay\relay.py --port 8787 --proxy http://127.0.0.1:7897
+# ---------------------------------------------------------------------------

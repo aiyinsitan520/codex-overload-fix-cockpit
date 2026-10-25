@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Cockpit-tools layout — the relay sits BETWEEN Codex and cockpit-tools.
+#
+# Codex  ->  127.0.0.1:8788 (relay)  ->  127.0.0.1:8888 (cockpit)  ->  upstream
+#
+# Why this shape and not the relay-then-internet shape:
+#   * cockpit-tools already owns account rotation, session affinity, quota
+#     pool and image generation. Putting the relay in front of it keeps all
+#     of that working; the relay only adds the in-band retry.
+#   * cockpit converts an in-band overload into HTTP 503. Retrying that 503 is
+#     safe *only* before any content reached the client — which is what the
+#     relay checks.
+#
+# Copy the block below into %USERPROFILE%\.codex\config.toml after backing it
+# up, then fully quit and restart Codex.
+# ---------------------------------------------------------------------------
+
+model_provider = "codex_local_access_retry"
+
+[model_providers.codex_local_access_retry]
+name = "Codex API Service (retry)"
+base_url = "http://127.0.0.1:8788/v1"
+wire_api = "responses"
+requires_openai_auth = true
+supports_websockets = false
+
+# --- copy these two lines from your existing [model_providers.codex_local_access]
+# experimental_bearer_token = "agt_codex_..."
+# http_headers = { x-openai-actor-authorization = "cockpit-tools", ... }
+#
+# They are what cockpit uses to recognise the caller. Drop them and every
+# request is rejected, so install.ps1 copies them for you when it can.
+
+# The relay does the real retrying; these stop Codex giving up on the outer
+# stream first.
+stream_max_retries = 20
+request_max_retries = 10
+
+# ---------------------------------------------------------------------------
+# Things that must stay pointed at cockpit, NOT at the relay:
+#
+#   experimental_realtime_ws_base_url = "http://localhost:8888/v1"
+#
+# The relay speaks HTTP only. Leave the realtime/WebSocket base URL alone;
+# cockpit handles that channel itself.
+#
+# Roll back: set model_provider = "codex_local_access" (or whatever you had
+# before) and delete the block above. The relay can keep running harmlessly.
+#
+# Avoid 8787 for the relay when cockpit-tools is installed: workbuddy2api's
+# compat server already listens there. That is why this example uses 8788.
+# ---------------------------------------------------------------------------
