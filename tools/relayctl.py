@@ -45,7 +45,18 @@ def cmd_status(relay):
     st, body = _get(relay.rstrip("/") + "/__relay/health")
     if st != 200:
         print(f"relay at {relay} is not answering ({st or 'no connection'})")
-        print("  is it running?   netstat -ano | findstr :8788")
+        if st in (404, 405):
+            # Something IS listening — it just has no health endpoint. That is
+            # the pre-2.0 relay (or a different process on this port), so the
+            # useful next question is which build is running, not whether the
+            # port is open.
+            print("  a process is listening but has no /__relay/health endpoint:")
+            print("  that is the old relay, or another service on this port.")
+            print("  identify it:   netstat -ano | findstr :8788")
+            print("                 powershell -c \"Get-CimInstance Win32_Process "
+                  "-Filter 'ProcessId=<pid>' | Select CommandLine\"")
+        else:
+            print("  is it running?   netstat -ano | findstr :8788")
         return 1
     snap = json.loads(body)
     print(f"relay      {snap.get('version')}  up {snap.get('uptime_s')}s")
